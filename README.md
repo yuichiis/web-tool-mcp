@@ -18,8 +18,10 @@ Requires Node.js 18+.
 
 ```sh
 npm install
+npx playwright install
 npm run build
-node dist/index.js
+# Test
+npx @modelcontextprotocol/inspector node dist/index.js
 ```
 
 Example MCP configuration:
