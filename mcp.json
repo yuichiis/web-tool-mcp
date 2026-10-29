@@ -1,0 +1,8 @@
+﻿{
+  "mcpServers": {
+    "web-tool": {
+      "command": "node",
+      "args": ["./dist/index.js"]
+    }
+  }
+}
