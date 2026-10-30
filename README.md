@@ -14,14 +14,33 @@ Fetches one to five supplied HTTP(S) URLs and returns cleaned page text with hea
 
 ## Run
 
-Requires Node.js 18+.
+Requires Node.js 24+.
 
 ```sh
+npm install
+npm install-scripts approve esbuild
 npm install
 npx playwright install
 npm run build
 # Test
 npx @modelcontextprotocol/inspector node dist/index.js
+```
+
+or 
+
+```sh
+pnpm install
+pnpm approve-builds
+pnpm install
+pnpm dlx playwright install
+pnpm run build
+# Test
+pnpm dlx @modelcontextprotocol/inspector node dist/index.js
+```
+
+If you want to use firefox;
+```sh
+pnpm dlx @modelcontextprotocol/inspector -e BROWSER_TYPES=firefox node dist/index.js
 ```
 
 Example MCP configuration:
