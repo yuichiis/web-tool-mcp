@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 import { chromium, firefox, webkit, Browser, LaunchOptions } from 'playwright';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,7 +20,7 @@ export class BrowserPool {
     const browserTypesEnv = process.env.BROWSER_TYPES || 'chromium,firefox';
     this.browserTypes = browserTypesEnv.split(',').map(type => type.trim());
     
-    console.log(`[BrowserPool] Configuration: maxBrowsers=${this.maxBrowsers}, headless=${this.headless}, types=${this.browserTypes.join(',')}`);
+    logger.log(`[BrowserPool] Configuration: maxBrowsers=${this.maxBrowsers}, headless=${this.headless}, types=${this.browserTypes.join(',')}`);
   }
 
   async getBrowser(): Promise<Browser> {
@@ -28,8 +29,9 @@ export class BrowserPool {
     this.currentBrowserIndex++;
     this.lastUsedBrowserType = browserType;
 
-    if (this.browsers.has(browserType)) {
-      const browser = this.browsers.get(browserType)!;
+    const existingBrowser = this.browsers.get(browserType);
+    if (existingBrowser) {
+      const browser = existingBrowser;
       
       // Check if browser is still connected and healthy
       try {
@@ -43,19 +45,19 @@ export class BrowserPool {
           return browser;
         }
       } catch (error) {
-        console.log(`[BrowserPool] Browser ${browserType} health check failed:`, error);
+        logger.log(`[BrowserPool] Browser ${browserType} health check failed:`, error);
         // Browser is unhealthy, remove it and close if possible
         this.browsers.delete(browserType);
         try {
           await browser.close();
         } catch (closeError) {
-          console.log(`[BrowserPool] Error closing unhealthy browser:`, closeError);
+          logger.log(`[BrowserPool] Error closing unhealthy browser:`, closeError);
         }
       }
     }
 
     // Launch new browser
-    console.log(`[BrowserPool] Launching new ${browserType} browser`);
+    logger.log(`[BrowserPool] Launching new ${browserType} browser`);
     
     const launchOptions = {
       headless: this.headless,
@@ -101,7 +103,7 @@ export class BrowserPool {
           try {
             await oldestBrowser[1].close();
           } catch (error) {
-            console.error(`[BrowserPool] Error closing old browser:`, error);
+            logger.error(`[BrowserPool] Error closing old browser:`, error);
           }
           this.browsers.delete(oldestBrowser[0]);
         }
@@ -109,7 +111,7 @@ export class BrowserPool {
 
       return browser;
     } catch (error) {
-      console.error(`[BrowserPool] Failed to launch ${browserType} browser:`, error);
+      logger.error(`[BrowserPool] Failed to launch ${browserType} browser:`, error);
       throw error;
     }
   }
@@ -134,16 +136,16 @@ export class BrowserPool {
       ];
       const executablePath = systemBrowsers.find(existsSync);
       if (!executablePath) throw bundledError;
-      console.warn(`[BrowserPool] Playwright browser is unavailable; falling back to ${executablePath}`);
+      logger.warn(`[BrowserPool] Playwright browser is unavailable; falling back to ${executablePath}`);
       return chromium.launch({ ...options, executablePath });
     }
   }
   async closeAll(): Promise<void> {
-    console.log(`[BrowserPool] Closing ${this.browsers.size} browsers`);
+    logger.log(`[BrowserPool] Closing ${this.browsers.size} browsers`);
     
     const closePromises = Array.from(this.browsers.values()).map(browser => 
       browser.close().catch(error => 
-        console.error('Error closing browser:', error)
+        logger.error('Error closing browser:', error)
       )
     );
     

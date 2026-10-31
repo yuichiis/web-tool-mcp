@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { ContentExtractionOptions, SearchResult } from './types.js';
@@ -15,7 +16,7 @@ export class ContentExtractor {
     
     // Validate the parsed value
     if (isNaN(this.maxContentLength) || this.maxContentLength < 0) {
-      console.warn(`[ContentExtractor] Invalid MAX_CONTENT_LENGTH value: ${envMaxLength}, using default 500000`);
+      logger.warn(`[ContentExtractor] Invalid MAX_CONTENT_LENGTH value: ${envMaxLength}, using default 500000`);
       this.maxContentLength = 500000;
     }
   }
@@ -49,11 +50,11 @@ export class ContentExtractor {
 
       return this.parseContent(response.data);
     } catch (error) {
-      console.error(`Content extraction error for ${url}:`, error);
+      logger.error(`Content extraction error for ${url}:`, error);
       
       // If it's a 403 error, try with different headers
       if (axios.isAxiosError(error) && error.response?.status === 403) {
-        console.log(`[ContentExtractor] Trying alternative headers for ${url}`);
+        logger.log(`[ContentExtractor] Trying alternative headers for ${url}`);
         try {
           const response = await axios.get(url, {
             headers: {
@@ -72,14 +73,14 @@ export class ContentExtractor {
             validateStatus: (status: number) => status < 400,
           });
           
-          console.log(`[ContentExtractor] Alternative headers worked for ${url}`);
+          logger.log(`[ContentExtractor] Alternative headers worked for ${url}`);
           return this.parseContent(response.data);
         } catch (retryError) {
-          console.error(`[ContentExtractor] Alternative headers also failed for ${url}:`, retryError);
+          logger.error(`[ContentExtractor] Alternative headers also failed for ${url}:`, retryError);
         }
       }
       
-      throw new Error(`Failed to extract content from ${url}: ${this.getSpecificErrorMessage(error)}`);
+      throw new Error(`Failed to extract content from ${url}: ${this.getSpecificErrorMessage(error)}`, { cause: error });
     }
   }
 
@@ -87,11 +88,11 @@ export class ContentExtractor {
     const enhancedResults: SearchResult[] = [];
     let processedCount = 0;
     
-    console.log(`[ContentExtractor] Processing up to ${results.length} results to get ${targetCount} non-PDF results`);
+    logger.log(`[ContentExtractor] Processing up to ${results.length} results to get ${targetCount} non-PDF results`);
     
     for (const result of results) {
       if (enhancedResults.length >= targetCount) {
-        console.log(`[ContentExtractor] Reached target count of ${targetCount} results`);
+        logger.log(`[ContentExtractor] Reached target count of ${targetCount} results`);
         break;
       }
       
@@ -99,12 +100,12 @@ export class ContentExtractor {
       
       // Skip PDF files
       if (isPdfUrl(result.url)) {
-        console.log(`[ContentExtractor] Skipping PDF file: ${result.url}`);
+        logger.log(`[ContentExtractor] Skipping PDF file: ${result.url}`);
         continue;
       }
       
       try {
-        console.log(`[ContentExtractor] Extracting content from: ${result.url}`);
+        logger.log(`[ContentExtractor] Extracting content from: ${result.url}`);
         const content = await this.extractContent({ url: result.url });
         const cleanedContent = cleanText(content, this.maxContentLength);
         
@@ -117,9 +118,9 @@ export class ContentExtractor {
           fetchStatus: 'success' as const,
         });
         
-        console.log(`[ContentExtractor] Successfully extracted content (${enhancedResults.length}/${targetCount})`);
+        logger.log(`[ContentExtractor] Successfully extracted content (${enhancedResults.length}/${targetCount})`);
       } catch (error) {
-        console.log(`[ContentExtractor] Failed to extract content from ${result.url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        logger.log(`[ContentExtractor] Failed to extract content from ${result.url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         enhancedResults.push({
           ...result,
           fullContent: '',
@@ -132,7 +133,7 @@ export class ContentExtractor {
       }
     }
     
-    console.log(`[ContentExtractor] Processed ${processedCount} results, extracted ${enhancedResults.length} non-PDF results`);
+    logger.log(`[ContentExtractor] Processed ${processedCount} results, extracted ${enhancedResults.length} non-PDF results`);
     return enhancedResults;
   }
 
@@ -192,7 +193,7 @@ export class ContentExtractor {
       if ($content.length > 0) {
         mainContent = $content.text().trim();
         if (mainContent.length > 100) { // Ensure we have substantial content
-          console.log(`[ContentExtractor] Found content with selector: ${selector} (${mainContent.length} chars)`);
+          logger.log(`[ContentExtractor] Found content with selector: ${selector} (${mainContent.length} chars)`);
           break;
         }
       }
@@ -200,7 +201,7 @@ export class ContentExtractor {
     
     // If no main content found, try body content
     if (!mainContent || mainContent.length < 100) {
-      console.log(`[ContentExtractor] No main content found, using body content`);
+      logger.log(`[ContentExtractor] No main content found, using body content`);
       mainContent = $('body').text().trim();
     }
     

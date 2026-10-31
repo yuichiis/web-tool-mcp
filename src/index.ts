@@ -12,9 +12,6 @@ import { SearchEngine } from './search-engine.js';
 import { EnhancedContentExtractor } from './enhanced-content-extractor.js';
 import { validateUrl } from './utils.js';
 
-// Keep stdout exclusively for the MCP stdio protocol; inherited modules log diagnostics with console.log.
-console.log = (...args: unknown[]) => console.error(...args);
-
 const server = new McpServer({ name: 'web-tool-mcp', version: '1.0.0' });
 const searchEngine = new SearchEngine();
 const extractor = new EnhancedContentExtractor();
@@ -146,7 +143,6 @@ const transport = new StdioServerTransport();
 await server.connect(transport);
 process.on('SIGINT', async () => { await Promise.all([extractor.closeAll(), searchEngine.closeAll()]); process.exit(0); });
 process.on('SIGTERM', async () => { await Promise.all([extractor.closeAll(), searchEngine.closeAll()]); process.exit(0); });
-
 
 
 
